@@ -16,7 +16,7 @@ The delta value between the background and foreground frame may have certain cha
 the pixel values even though there are no movement. Therefore we want to declare what a "significant" change is,
 which could indicate actual movement.
 """
-LOWER_THRESHOLD = 60
+LOWER_THRESHOLD = 70
 
 """
 Width of the frame that is sent through the motion detection algorithm. 
@@ -28,7 +28,7 @@ FRAME_WIDTH = 500
 """
 Minimum area (in pixels) that a contour must have to be considered as a an object for drawing a rectangle around it
 """
-MIN_AREA_FOR_CONTOUR = 600
+MIN_AREA_FOR_CONTOUR = 750
 
 
 def capture(camera_index = 0):
