@@ -1,7 +1,9 @@
+import os
 import cv2 as cv
 import imutils
 import time
 import numpy as np
+from dotenv import dotenv_values
 import threading
 from src.utils.notifications import send_notification
 from src.utils.motion_detection import motion_detected, motion_frame_add_text, draw_rectangles, find_contours
@@ -28,6 +30,8 @@ stream_online = False
 #True if the capturer is active, false if is deactivated
 capture = False
 
+PROD = (dotenv_values(".env")["ENV"] == "prod")
+
 def start_capture(camera_index = 0):
     
     video_capture = cv.VideoCapture(camera_index)
@@ -48,12 +52,13 @@ def start_capture(camera_index = 0):
             continue
         
         #Displaying the frame
-        cv.imshow('frame', frame)
+        if not PROD:
+            cv.imshow('frame', frame)
 
         #Quit if key 'q' s pressed
         key = cv.waitKey(1)
         if key == ord('q'):
-            break
+            capture = False
 
     #Cancel timer somehow? Not critical, but may take some time to get CLI back from the timer thread
     video_capture.release()
@@ -84,30 +89,32 @@ def detection(frame):
     #Applying a threshold in how much a pixel must be different to determine if there is actual movement
     threshold = cv.threshold(frame_delta, LOWER_THRESHOLD, 255, cv.THRESH_BINARY)[1]
 
-    contours = find_contours(threshold)
+    if not PROD:
+        cv.imshow('threshold', threshold)
 
-    draw_rectangles(contours, frame)
-
+    #CHECK FOR MOTION and save in bool
     motion = motion_detected(threshold)
 
+    motion_frame_add_text(motion, frame)
+    
     if(motion):
+
+        contours = find_contours(threshold)
+
+        draw_rectangles(contours, frame)
+
         global sent_notification
 
         if not sent_notification and not stream_online:
             sent_notification = True
             send_notification()
-            threading.Timer(NOTIFICATION_DELAY, reactivate_notification).start()
-    
-    motion_frame_add_text(motion, frame)
-        
-    
-    cv.imshow('threshold', threshold)
+            threading.Timer(NOTIFICATION_DELAY, reset_notification).start()
 
     return frame
 
 
 
-def reactivate_notification():
+def reset_notification():
     global sent_notification
 
     sent_notification = False
