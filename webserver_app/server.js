@@ -1,42 +1,49 @@
 const express = require('express');
 const http = require('http');
-const { Server } = require('socket.io');
+const socketIo = require('socket.io');
 
-// Initialize the Express app
 const app = express();
+const server = http.createServer(app);
+const io = socketIo(server);
 
-// Serve static files (optional, if you have any front-end files to serve)
+let peerAConnected = false;
+
 app.use(express.static('public'));
 
-// Create an HTTP server
-const server = http.createServer(app);
-
-// Attach Socket.io to the server
-const io = new Server(server);
-
 io.on('connection', (socket) => {
-    console.log('a user connected');
+    console.log('A user connected:', socket.id);
 
-    // Handle offer, answer, and candidate events
+    // Determine the role of the connecting peer (Peer A or Peer B)
+    socket.on('check-role', () => {
+        if (!peerAConnected) {
+            peerAConnected = true;
+            socket.emit('role', 'peerA');
+        } else {
+            socket.emit('role', 'peerB');
+        }
+    });
+
+    // Handle the offer from Peer A
     socket.on('offer', (offer) => {
         socket.broadcast.emit('offer', offer);
     });
 
+    // Handle the answer from Peer B
     socket.on('answer', (answer) => {
         socket.broadcast.emit('answer', answer);
     });
 
+    // Handle ICE candidates
     socket.on('candidate', (candidate) => {
         socket.broadcast.emit('candidate', candidate);
     });
 
     socket.on('disconnect', () => {
-        console.log('user disconnected');
+        console.log('User disconnected:', socket.id);
+        peerAConnected = false; // Reset for simplicity
     });
 });
 
-// Start the server
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+server.listen(3000, () => {
+    console.log('Server is running on port 3000');
 });
