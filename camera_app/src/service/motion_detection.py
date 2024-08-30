@@ -1,6 +1,8 @@
 import cv2 as cv
 import imutils
+import time
 import numpy as np
+import threading
 
 """
 The background frame used in the motion detection algorithm to 
@@ -31,7 +33,22 @@ Minimum area (in pixels) that a contour must have to be considered as a an objec
 MIN_AREA_FOR_CONTOUR = 750
 
 
-def capture(camera_index = 0):
+#Move this to a separate file, working as a local database
+AUTHENTICATED_USERS = ["ulrik123"]
+
+currently_motion = False
+
+#True if a notification has been sent recently (within the NOTIFICATION_DELAY previous seconds), false if not
+sent_notification = False
+
+#true if there is a current livestream, false if not
+stream_online = False
+
+#Length of the stream duration in seconds 
+NOTIFICATION_DELAY = 60
+
+
+def start_capture(camera_index = 0):
     
     video_capture = cv.VideoCapture(camera_index)
 
@@ -59,11 +76,16 @@ def capture(camera_index = 0):
     cv.destroyAllWindows()
 
 
+def reactivate_notification():
+    global sent_notification
+
+    sent_notification = False
+
 #Returns a binary image where the pixel values are either 0 or 255, 0 if no motion detected, 255 if motion detected
-def detection(frame, frame_width = FRAME_WIDTH, lower_threshold = LOWER_THRESHOLD):
+def detection(frame):
 
     #Resizing because it is not necessary to compute on such large raw images/frames
-    frame = imutils.resize(frame, width=frame_width)
+    frame = imutils.resize(frame, width=FRAME_WIDTH)
 
     #Applying grayscale and blur because no subsequent images are 100% equal due to the camera sensors
     gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
@@ -80,12 +102,25 @@ def detection(frame, frame_width = FRAME_WIDTH, lower_threshold = LOWER_THRESHOL
     frame_delta = cv.absdiff(first_frame, blurred)
 
     #Applying a threshold in how much a pixel must be different to determine if there is actual movement
-    threshold = cv.threshold(frame_delta, lower_threshold, 255, cv.THRESH_BINARY)[1]
+    threshold = cv.threshold(frame_delta, LOWER_THRESHOLD, 255, cv.THRESH_BINARY)[1]
 
     contours = find_contours(threshold)
 
     draw_rectangles(contours, frame)
-    apply_text(threshold, frame)
+
+    motion = motion_detected(threshold)
+
+    if(motion):
+        global sent_notification
+
+        if not sent_notification and not stream_online:
+            sent_notification = True
+            notification()
+            threading.Timer(NOTIFICATION_DELAY, reactivate_notification).start()
+    
+    apply_text(motion, frame)
+        
+    
     cv.imshow('threshold', threshold)
 
     return frame
@@ -110,8 +145,22 @@ def draw_rectangles(cnts, frame):
         cv.rectangle(frame, (x,y), (x+w, y+h), (0,255,0), 2)
 
 #Applies text to the frame whether motion is detected or not
-def apply_text(binary_frame, frame):
-    if np.sum(binary_frame) == 0:
+def apply_text(motion, frame):
+    if not motion:
         cv.putText(frame, "No motion detected", (10,20), cv.FONT_HERSHEY_SIMPLEX, 0.5, (255,0,0), 1)
     else:
         cv.putText(frame, "Motion detected", (10,20), cv.FONT_HERSHEY_SIMPLEX, 0.5, (255,0,0), 1)
+
+def motion_detected(threshold):
+    return np.sum(threshold) > 0
+
+
+def notification():
+    print("Sent notification")
+
+    #Send requests to the webserver to notify the user
+    #OR
+    #Send an email to the user from a separate thread
+
+        
+        
