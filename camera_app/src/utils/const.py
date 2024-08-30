@@ -1,13 +1,3 @@
-
-
-"""
-The background frame used in the motion detection algorithm to 
-detect difference in pixel intensity values between the (ideally) static background frame and foreground frame.
-The foreground frame (which is the frame that is being currently captured by the camera) 
-may have captured movement, and will thus have different pixel intensity values.
-"""
-first_frame = None
-
 """
 Threshold for changes in pixel intensity values.
 The delta value between the background and foreground frame may have certain changes in 

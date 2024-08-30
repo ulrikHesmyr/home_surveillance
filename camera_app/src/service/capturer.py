@@ -3,9 +3,18 @@ import imutils
 import time
 import numpy as np
 import threading
-from src.utils.notifications import send_notification, reactivate_notification
+from src.utils.notifications import send_notification
 from src.utils.motion_detection import motion_detected, motion_frame_add_text, draw_rectangles, find_contours
 from src.utils.const import NOTIFICATION_DELAY, FRAME_WIDTH, LOWER_THRESHOLD
+
+
+"""
+The background frame used in the motion detection algorithm to 
+detect difference in pixel intensity values between the (ideally) static background frame and foreground frame.
+The foreground frame (which is the frame that is being currently captured by the camera) 
+may have captured movement, and will thus have different pixel intensity values.
+"""
+first_frame = None
 
 #Move this to a separate file, working as a local database
 authenticated_users = ["ulrik123"]
@@ -46,6 +55,7 @@ def start_capture(camera_index = 0):
         if key == ord('q'):
             break
 
+    #Cancel timer somehow? Not critical, but may take some time to get CLI back from the timer thread
     video_capture.release()
     cv.destroyAllWindows()
 
@@ -96,3 +106,8 @@ def detection(frame):
     return frame
 
 
+
+def reactivate_notification():
+    global sent_notification
+
+    sent_notification = False

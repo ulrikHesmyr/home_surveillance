@@ -1,7 +1,7 @@
 import numpy as np
 import cv2 as cv
 import imutils
-from const import MIN_AREA_FOR_CONTOUR
+from src.utils.const import MIN_AREA_FOR_CONTOUR
 
 def motion_detected(threshold):
     return np.sum(threshold) > 0
